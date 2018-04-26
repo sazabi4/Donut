@@ -312,7 +312,7 @@ void DonutEngine::calcParameters(int iT){
     _zLength = 6.523858;  // F#3.66
     _lambdaz = _waveLength * _zLength;
     _fLength = 13.92452; //from Zemax
-    _pixelSize = 1.0 * 9.0e-6;  // operated in 1x1 mode, 15 micron pixels
+    _pixelSize = 1.0 * 9.0e-6;  // operated in 1x1 mode, 9 micron pixels???? size of wavefront changed, need to understand!!!
   } 
 
   //
