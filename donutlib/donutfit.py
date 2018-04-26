@@ -117,7 +117,7 @@ class donutfit(object):
                             "FN2":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,0.26,0.01,-0.13],
                             "FN3":[0.0,0.0,-11.0,0.0,0.0,0.0,0.0,0.05,-0.25,-0.11],
                             "FN4":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,-0.05,-0.25,-0.14],
-                            "CIE":[0.0,0.0,4.5, 0.0,0.0,0.0,0.0,0.0,0.0,-0.08]}
+                            "CIE":[0.0,0.0,4.5, 0.0,0.0,0.0,0.0,0.0,0.0,-0.08]}  # adding Zernike for DESI CI, NEED CHANGE TO USE ZEMAX OUTPUT LATER
 
         # default Dictionary
         self.fitDict = {"inputImageArray":None,
@@ -181,8 +181,6 @@ class donutfit(object):
                 xDECam = 0.
                 yDECam = 0.
 
-            xDECam = 0.
-            yDECam = 0.
             print('Location of the donut in field angles', xDECam, yDECam)
 
             # load the Image AJR 9/14/2012 - now assume we are only running on postage stamps - remove ability to
