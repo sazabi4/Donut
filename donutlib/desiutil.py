@@ -134,8 +134,10 @@ class desiciinfo(object):
     def __init__(self, **inputDict):
 
         self.infoDict = self.info()
-        self.degperpixel = 3.55e-5 #pixel scale in deg/pixel assuming pixel size = 9 micron and plate scale of 14.22 arcsec/mm
-        # need to change for radial, transverse and center later
+        self.degperpixel_c = 3.7025e-05 #14.81 / 1000. * 9. /3600 #pixel scale at center chip in deg/pixel
+        self.degperpixel_t = 3.5550e-05 #14.22 / 1000. * 9. /3600 #tangential pixel scale at edge chips in deg/pixel
+        self.degperpixel_r = 3.2775e-05 #13.11 / 1000. * 9. /3600 #radial pixel scale at edge chips in deg/pixel
+
         self.rClear = 99999 # something for vignetting, what should this be?
 
     def __getstate__(self):
@@ -158,15 +160,40 @@ class desiciinfo(object):
 
         # CCD size in pixels
         if ccdinfo["FAflag"]:
-            xpixHalfSize = 3072./2
-            ypixHalfSize = 2048./2
+            xpixHalfSize = 1536.
+            ypixHalfSize = 1024.
         else:
             print('WE ONLY HAVE FAflag CHIPS HERE!')
 
         # calculate positions
-        xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel
-        yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel
+        #xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel
+        #yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel
+        # Ting: not sure about this 0.5 pixel thing
 
+        # rotation matrix:
+        #  XPos - XCen = CD1_1 * (ix - xpixHalfSize + 0.5) + CD1_2 * (iy - ypixHalfSize + 0.5)
+        #  YPos - YCen = CD2_1 * (ix - xpixHalfSize + 0.5) + CD2_2 * (iy - ypixHalfSize + 0.5)
+        if extname == 'CIC':
+            xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_c * -1
+            yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_c
+
+        if extname == 'CIS':
+            xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * -1
+            yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r
+
+        if extname == 'CIE':
+            xPos = ccdinfo["xCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r * -1
+            yPos = ccdinfo["yCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * -1
+
+        if extname == 'CIN':
+            xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * 1
+            yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r * -1
+
+        if extname == 'CIW':
+            xPos = ccdinfo["xCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r
+            yPos = ccdinfo["yCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t
+
+        #print "XDECam, YDECam", xPos, yPos
         return xPos, yPos
 
     def getPixel(self, extname, xPos, yPos):
@@ -184,8 +211,28 @@ class desiciinfo(object):
 
 
         # calculate positions
-        ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel + xpixHalfSize - 0.5
-        iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel + ypixHalfSize - 0.5
+        #ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel + xpixHalfSize - 0.5
+        #iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel + ypixHalfSize - 0.5
+
+        if extname == 'CIC':
+            ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_c * (-1) + xpixHalfSize - 0.5
+            iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_c + ypixHalfSize - 0.5
+
+        if extname == 'CIS':
+            ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_t * (-1) + xpixHalfSize - 0.5
+            iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_r + ypixHalfSize - 0.5
+
+        if extname == 'CIE':
+            iy = (xPos - ccdinfo["xCenter"]) / self.degperpixel_r * (-1) + ypixHalfSize - 0.5
+            ix = (yPos - ccdinfo["yCenter"]) / self.degperpixel_t * (-1) + xpixHalfSize - 0.5
+
+        if extname == 'CIN':
+            ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_t + xpixHalfSize - 0.5
+            iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_r * (-1) + ypixHalfSize - 0.5
+
+        if extname == 'CIW':
+            iy = (xPos - ccdinfo["xCenter"]) / self.degperpixel_r + ypixHalfSize - 0.5
+            ix = (yPos - ccdinfo["yCenter"]) / self.degperpixel_t + xpixHalfSize - 0.5
 
         return ix, iy
 
@@ -196,8 +243,8 @@ class desiciinfo(object):
         for ext in list(self.infoDict.keys()):
             ccdinfo = self.infoDict[ext]
             # is this x,y inside this chip?
-            nxdif = numpy.abs((xPos - ccdinfo["xCenter"]) / self.degperpixel)
-            nydif = numpy.abs((yPos - ccdinfo["yCenter"]) / self.degperpixel)
+            nxdif = numpy.abs((xPos - ccdinfo["xCenter"]) / self.degperpixel_c)
+            nydif = numpy.abs((yPos - ccdinfo["yCenter"]) / self.degperpixel_c)
             print('ext, nxdif, nydif', ext, nxdif, nydif)
             # CCD size in pixels
             if ccdinfo["FAflag"]:
