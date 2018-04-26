@@ -15,7 +15,7 @@ ROOT.PyConfig.IgnoreCommandLineOptions = True
 from donutlib.donutengine import donutengine
 from donutlib.donututil import loadImage
 from donutlib.donututil import calcStarting
-from donutlib.decamutil import decaminfo
+# from donutlib.decamutil import decaminfo
 
 class donutfit(object):
     """ donutfit is a class used to fit donuts, using donutengine and MINUIT, for the DES experiment
@@ -49,8 +49,19 @@ class donutfit(object):
         self.weight = numpy.ones(1)
         self.sigmasq = numpy.ones(1)
 
-        # get decam info
-        self.decamInfo = decaminfo()
+        # get decam info or desi info
+        if self.paramDict["iTelescope"] == 6:
+            print('This is for DESI CI')
+            from donutlib.desiutil import desiciinfo
+            self.dInfo = desiciinfo()
+        elif self.paramDict["iTelescope"] == 5:
+            print('This is for DESI')
+            from donutlib.desiutil import desiinfo
+            self.dInfo = desiinfo()
+        else:
+            print('This is for DECam')
+            from donutlib.decamutil import decaminfo
+            self.dInfo = decaminfo()
 
         # setup MINUIT
         self.gMinuit = ROOT.TMinuit(self.gFitFunc.npar)
@@ -105,7 +116,9 @@ class donutfit(object):
                             "FN1":[0.0,0.0,-11.0,0.0,0.0,0.0,0.0,0.20,0.17,-0.08],
                             "FN2":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,0.26,0.01,-0.13],
                             "FN3":[0.0,0.0,-11.0,0.0,0.0,0.0,0.0,0.05,-0.25,-0.11],
-                            "FN4":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,-0.05,-0.25,-0.14] }  
+                            "FN4":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,-0.05,-0.25,-0.14],
+                            "CIE":[0.0,0.0,4.5, 0.0,0.0,0.0,0.0,0.0,0.0,-0.08]}
+
         # default Dictionary
         self.fitDict = {"inputImageArray":None,
                         "inputFile":"",
@@ -156,15 +169,21 @@ class donutfit(object):
 
             # calculate position in DECam focal plane
             # if this info isn't in the header, just set values to 0,0
+            print('extname:', extname, 'ix, iy', ix, iy)
             if extname != 'None':
                 try:
-                    xDECam,yDECam = self.decamInfo.getPosition(extname,ix,iy)
+                    xDECam,yDECam = self.dInfo.getPosition(extname,ix,iy)
+                    print('xDECam, yDECam', xDECam,yDECam)
                 except:
                     xDECam = 0.
                     yDECam = 0.
             else:
                 xDECam = 0.
                 yDECam = 0.
+
+            xDECam = 0.
+            yDECam = 0.
+            print('Location of the donut in field angles', xDECam, yDECam)
 
             # load the Image AJR 9/14/2012 - now assume we are only running on postage stamps - remove ability to
             # work on full image, never use that anymore...

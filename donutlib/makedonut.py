@@ -18,7 +18,6 @@ import string
 from donutlib.donututil import getZemaxWfm,getFitsWfm
 #from donutengine import donutengine
 from donutlib.donutengine import donutengine
-from donutlib.decamutil import decaminfo
 
 
 class makedonut(object):
@@ -86,8 +85,20 @@ class makedonut(object):
         # declare fit function
         self.gFitFunc = donutengine(**self.paramDict)
 
-        # DECam info
-        self.dinfo = decaminfo()
+        # DECam info or DESI info
+        if self.paramDict['iTelescope'] == 0:
+            from donutlib.decamutil import decaminfo
+            self.dinfo = decaminfo()
+        elif self.paramDict['iTelescope'] == 5:
+            from donutlib.desiutil import desiinfo
+            self.dinfo = desiinfo()
+        elif self.paramDict['iTelescope'] == 6:
+            from donutlib.desiutil import desiciinfo
+            self.dinfo = desiciinfo()
+        else:
+            print('HAVE NOT ADD OTHER INSTRUMENT YET')
+            exit()
+
 
         # set random seed
         numpy.random.seed(self.paramDict["randomSeed"])
@@ -214,10 +225,16 @@ class makedonut(object):
             hdu = pyfits.PrimaryHDU(imarr)
             prihdr =  hdu.header
 
-            prihdr.set("SCALE",0.27,"Arsec/pixel")
-            prihdr.set("XDECAM",self.paramDict["xDECam"],"Target xposition (mm) in focal plane")
-            prihdr.set("YDECAM",self.paramDict["yDECam"],"Target yposition (mm) in focal plane")
-            prihdr.set("EXTNAME",self.extname)  
+            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6:
+                prihdr.set("SCALE", self.dinfo.degperpixel*3600, "Arsec/pixel")
+                prihdr.set("XDECAM", self.paramDict["xDECam"], "Target xposition (deg) in focal plane")
+                prihdr.set("YDECAM", self.paramDict["yDECam"], "Target yposition (deg) in focal plane")
+            else:
+                prihdr.set("SCALE", 0.27, "Arsec/pixel")
+                prihdr.set("XDECAM",self.paramDict["xDECam"],"Target xposition (mm) in focal plane")
+                prihdr.set("YDECAM", self.paramDict["yDECam"], "Target yposition (mm) in focal plane")
+
+            prihdr.set("EXTNAME",self.extname)
             prihdr.set("IX",self.ix)
             prihdr.set("IY",self.iy)
             prihdr.set("FILTER",3,"Filter number 1-6=ugrizY")
