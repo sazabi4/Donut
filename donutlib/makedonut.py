@@ -111,9 +111,14 @@ class makedonut(object):
         # convert this position to extname,ix,iy
         # Note: x=0,y=0 is in between sensors.  IF this is used, then just set these by hand
         if X==0.0 and Y==0.0:
-            self.extname = "N4"
-            self.ix = -1024
-            self.iy = 2048
+            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6:
+                self.extname = "CIC"
+                self.ix = 1536
+                self.iy = 1024
+            else:
+                self.extname = "N4"
+                self.ix = -1024
+                self.iy = 2048
         else:        
             self.extname = self.dinfo.getSensor(X,Y)
             x,y = self.dinfo.getPixel(self.extname,X,Y)
@@ -226,7 +231,9 @@ class makedonut(object):
             prihdr =  hdu.header
 
             if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6:
-                prihdr.set("SCALE", self.dinfo.degperpixel*3600, "Arsec/pixel")
+                prihdr.set("SCALE_c", self.dinfo.degperpixel_c*3600, "Arsec/pixel")
+                prihdr.set("SCALE_t", self.dinfo.degperpixel_t*3600, "Arsec/pixel")
+                prihdr.set("SCALE_r", self.dinfo.degperpixel_r*3600, "Arsec/pixel")
                 prihdr.set("XDECAM", self.paramDict["xDECam"], "Target xposition (deg) in focal plane")
                 prihdr.set("YDECAM", self.paramDict["yDECam"], "Target yposition (deg) in focal plane")
             else:

@@ -7,7 +7,7 @@ from donutlib.donutfit import donutfit
 
 
 # make donuts
-z4 = 4.509
+z4 = -4.509
 #z4 = 0
 z5 = 0.
 z6 = -0.1168
@@ -26,13 +26,13 @@ inputDict = {'writeToFits':True,
              'pixelOverSample':8,
              'scaleFactor':1.,
              'rzero':0.125,
-             'nEle':1.0e6,
+             'nEle':5.0e6,
              'background':4000.,
              'randomFlag':True,
-             'randomSeed':2314809,
+             'randomSeed':2314808,
              'ZernikeArray':[0.,0.,0.,z4,z5,z6,z7,z8,z9,z10,z11],
-             'xDECam':0.03,
-             'yDECam':-1.56,
+             'xDECam': 0,
+             'yDECam': 1.57,
              #'xDECam': 1.286,
              #'yDECam': 0.806,
              #'xDECam':1.318,
@@ -64,12 +64,15 @@ fitinitDict = {"nZernikeTerms":15,
                "debugFlag":False}
 df = donutfit(**fitinitDict)
 
+
 # fit first donut
 fitDict  = {}
 fitDict["inputFile"] = 'unittest.0001.stamp.fits'
+#import pyfits
+#extname = pyfits.open(fitDict["inputFile"])[0].header['extname']
 fitDict["outputPrefix"] = 'unittest.0001'
 fitDict["inputrzero"] = 0.125
-fitDict["inputZernikeDict"] = {"CIS":[0.0,0.0,5.2,0.0,0.0,0.0,0.0,0.0,0.0,-0.08]}
+#fitDict["inputZernikeDict"] = {"CIC":[0.0,0.0,5.2,0.0,0.0,0.0,0.0,0.0,0.0,-0.08]}
 df.setupFit(**fitDict)
 
 
