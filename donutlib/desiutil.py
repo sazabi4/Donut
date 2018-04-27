@@ -119,15 +119,15 @@ class desiciinfo(object):
 
         # store a dictionary for each CCD, keyed by the CCD name
         infoDict["CIW"] = {"xCenter": -1.57, "yCenter": 0., "FAflag": True, "CCDNUM": 1, "Offset": 1500,
-                          "Extension": 1}
+                          "Extension": 1, "Rotation": 270}
         infoDict["CIS"] = {"xCenter": 0, "yCenter": -1.57, "FAflag": True, "CCDNUM": 2, "Offset": 1500,
-                          "Extension": 2}
+                          "Extension": 2, "Rotation": 0}
         infoDict["CIC"] = {"xCenter": 0, "yCenter": 0., "FAflag": True, "CCDNUM": 3, "Offset": 1500,
-                          "Extension": 3}
+                          "Extension": 3, "Rotation": 0}
         infoDict["CIN"] = {"xCenter": 0, "yCenter": 1.57, "FAflag": True, "CCDNUM": 4, "Offset": 1500,
-                          "Extension": 4}
+                          "Extension": 4, "Rotation": 180}
         infoDict["CIE"] = {"xCenter": 1.57, "yCenter": 0., "FAflag": True, "CCDNUM": 5, "Offset": 1500,
-                          "Extension": 5}
+                          "Extension": 5, "Rotation": 90}
 
         return infoDict
 
@@ -260,3 +260,49 @@ class desiciinfo(object):
         # get to here if we are not inside a chip
         return None
         #return ext # for test purpose, not matter where the position of the star, always return GFA1
+
+
+    def Zer56Rot(self, a5, a6, extname):
+        """
+        Rotate Zernike z5, z6 coefficient from the chip frame to fiducial frame
+        Here the fiducial frame is the same as the frame in CIC -- center chip.
+        """
+        ccdinfo = self.infoDict[extname]
+        rot = ccdinfo['Rotation']
+        rho = numpy.sqrt(a5**2 + a6**2)
+        theta = numpy.arctan(a5 / a6)
+        a5prime = rho * numpy.sin(theta - 2 * rot)
+        a6prime = rho * numpy.cos(theta - 2 * rot)
+        return a5prime, a6prime
+
+    # according to Aaron's notes, z7/z8 and z9/z10 should have no changes for rotation. Need to check why.
+    def Zer78Rot(self, a7, a8, extname):
+        """
+        Rotate Zernike z7, z8 coefficient from the chip frame to fiducial frame
+        Here the fiducial frame is the same as the frame in CIC -- center chip.
+        fixParamArray = [z1,z2,z3,z4,z5,z6,z7,z8,z9,z10,z11]
+        """
+        ccdinfo = self.infoDict[extname]
+        rot = ccdinfo['Rotation']
+        rho = numpy.sqrt(a7**2 + a8**2)
+        theta = numpy.arctan(a7 / a8)
+        a7prime = rho * numpy.sin(theta - rot)
+        a8prime = rho * numpy.cos(theta - rot)
+        return a7prime, a8prime
+
+    def Zer910Rot(self, a9, a10, extname):
+        """
+        Rotate Zernike z9, z10 coefficient from the chip frame to fiducial frame
+        Here the fiducial frame is the same as the frame in CIC -- center chip.
+        fixParamArray = [z1,z2,z3,z4,z5,z6,z7,z8,z9,z10,z11]
+        """
+        ccdinfo = self.infoDict[extname]
+        rot = ccdinfo['Rotation']
+        rho = numpy.sqrt(a9**2 + a10**2)
+        theta = numpy.arctan(a9 / a10)
+        a9prime = rho * numpy.sin(theta - 3 * rot)
+        a10prime = rho * numpy.cos(theta - 3 * rot)
+        return a9prime, a10prime
+
+
+
