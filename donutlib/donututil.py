@@ -10,7 +10,8 @@ import scipy.fftpack as theFFT
 import numpy.lib.index_tricks as itricks
 import re
 import os
-from astropy.io import fits as pyfits
+#from astropy.io import fits as pyfits
+import pyfits
 import pdb
 
 #
@@ -654,5 +655,68 @@ def getFitsWfm(fitsFile,extNo):
     data = hdu[extNo].data
     data64 = data.astype(numpy.float64)
     return data64
-    
-    
+
+
+def Zer56Rot(a5, a6, ea5, ea6, rot):
+    """
+    Rotate Zernike z5, z6 coefficient a5, a6 from the chip frame to fiducial frame (a5prime, a6prime)
+    Here the fiducial frame is the same as the frame in CIS -- south chip.
+    """
+    rot = numpy.radians(rot)
+    # rho = numpy.sqrt(a5**2 + a6**2)
+    # theta = numpy.arctan(a5 / a6)
+    # a5prime = rho * numpy.sin(theta - 2 * rot)
+    # a6prime = rho * numpy.cos(theta - 2 * rot)
+
+    a5prime = a5 * numpy.cos(2 * rot) - a6 * numpy.sin(2 * rot)
+    a6prime = a5 * numpy.sin(2 * rot) + a6 * numpy.cos(2 * rot)
+
+    ea5prime = numpy.sqrt(ea5**2 * numpy.cos(2 * rot)**2 + ea6**2 * numpy.sin(2 * rot)**2)
+    ea6prime = numpy.sqrt(ea5**2 * numpy.sin(2 * rot)**2 + ea6**2 * numpy.cos(2 * rot)**2)
+
+    return a5prime, a6prime, ea5prime, ea6prime
+
+
+# according to Aaron's notes, z7/z8 and z9/z10 should have no changes for rotation. Need to check why.
+def Zer78Rot(a7, a8, ea7, ea8, rot):
+    """
+    Rotate Zernike z7, z8 coefficient a7, z8 from the chip frame to fiducial frame (a7prime, a8prime)
+    Here the fiducial frame is the same as the frame in CIS -- south chip.
+    fixParamArray = [z1,z2,z3,z4,z5,z6,z7,z8,z9,z10,z11]
+    """
+    rot = numpy.radians(rot)
+    # rho = numpy.sqrt(a7**2 + a8**2)
+    # theta = numpy.arctan(a7 / a8)
+    # a7prime = rho * numpy.sin(theta - rot)
+    # a8prime = rho * numpy.cos(theta - rot)
+
+    a7prime = a7 * numpy.cos(rot) - a8 * numpy.sin(rot)
+    a8prime = a7 * numpy.sin(rot) + a8 * numpy.cos(rot)
+
+    ea7prime = numpy.sqrt(ea7**2 * numpy.cos(rot)**2 + ea8**2 * numpy.sin(rot)**2)
+    ea8prime = numpy.sqrt(ea7**2 * numpy.sin(rot)**2 + ea8**2 * numpy.cos(rot)**2)
+
+    return a7prime, a8prime, ea7prime, ea8prime
+
+
+def Zer910Rot(a9, a10, ea9, ea10, rot):
+    """
+    Rotate Zernike z9, z10 coefficient a9, a10 from the chip frame to fiducial frame (a9prime, a10prime)
+    Here the fiducial frame is the same as the frame in CIS -- south chip.
+    fixParamArray = [z1,z2,z3,z4,z5,z6,z7,z8,z9,z10,z11]
+    """
+    rot = numpy.radians(rot)
+    # rho = numpy.sqrt(a9**2 + a10**2)
+    # theta = numpy.arctan(a9 / a10)
+    # a9prime = rho * numpy.sin(theta - 3 * rot)
+    # a10prime = rho * numpy.cos(theta - 3 * rot)
+
+    a9prime = a9 * numpy.cos(3 * rot) - a10 * numpy.sin(3 * rot)
+    a10prime = a9 * numpy.sin(3 * rot) + a10 * numpy.cos(3 * rot)
+
+    ea9prime = numpy.sqrt(ea9**2 * numpy.cos(3 * rot)**2 + ea10**2 * numpy.sin(3 * rot)**2)
+    ea10prime = numpy.sqrt(ea9**2 * numpy.sin(3 * rot)**2 + ea10**2 * numpy.cos(3 * rot)**2)
+    return a9prime, a10prime, ea9prime, ea10prime
+
+
+

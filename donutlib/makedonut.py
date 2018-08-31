@@ -8,8 +8,8 @@
 #
 import numpy
 import scipy
-#import pyfits
-from astropy.io import fits as pyfits
+import pyfits
+#from astropy.io import fits as pyfits
 from array import array
 import argparse
 import pdb
@@ -92,7 +92,7 @@ class makedonut(object):
         elif self.paramDict['iTelescope'] == 5:
             from donutlib.desiutil import desiinfo
             self.dinfo = desiinfo()
-        elif self.paramDict['iTelescope'] == 6:
+        elif self.paramDict['iTelescope'] == 6 or self.paramDict['iTelescope'] == 7 :
             from donutlib.desiutil import desiciinfo
             self.dinfo = desiciinfo()
         else:
@@ -111,7 +111,7 @@ class makedonut(object):
         # convert this position to extname,ix,iy
         # Note: x=0,y=0 is in between sensors.  IF this is used, then just set these by hand
         if X==0.0 and Y==0.0:
-            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6:
+            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7:
                 self.extname = "CIC"
                 self.ix = 1536
                 self.iy = 1024
@@ -230,7 +230,7 @@ class makedonut(object):
             hdu = pyfits.PrimaryHDU(imarr)
             prihdr =  hdu.header
 
-            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6:
+            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7:
                 prihdr.set("SCALE_c", self.dinfo.degperpixel_c*3600, "Arsec/pixel")
                 prihdr.set("SCALE_t", self.dinfo.degperpixel_t*3600, "Arsec/pixel")
                 prihdr.set("SCALE_r", self.dinfo.degperpixel_r*3600, "Arsec/pixel")

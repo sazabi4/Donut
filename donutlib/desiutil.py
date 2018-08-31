@@ -118,15 +118,17 @@ class desiciinfo(object):
         infoDict = OrderedDict()
 
         # store a dictionary for each CCD, keyed by the CCD name
-        infoDict["CIW"] = {"xCenter": -1.57, "yCenter": 0., "FAflag": True, "CCDNUM": 1, "Offset": 1500,
-                          "Extension": 1, "Rotation": 270}
-        infoDict["CIS"] = {"xCenter": 0, "yCenter": -1.57, "FAflag": True, "CCDNUM": 2, "Offset": 1500,
+        # NSWE is the sky postion.
+        # Rotation here is defined as the rotation angle from chip frame to fiducial global frame, counter-clock wise is positive
+        infoDict["CIW"] = {"xCenter": 1.57, "yCenter": 0., "FAflag": True, "CCDNUM": 5, "Offset": 1500,
+                          "Extension": 1, "Rotation": -90}
+        infoDict["CIS"] = {"xCenter": 0, "yCenter": -1.57, "FAflag": True, "CCDNUM": 4, "Offset": 1500,
                           "Extension": 2, "Rotation": 0}
         infoDict["CIC"] = {"xCenter": 0, "yCenter": 0., "FAflag": True, "CCDNUM": 3, "Offset": 1500,
-                          "Extension": 3, "Rotation": 0}
-        infoDict["CIN"] = {"xCenter": 0, "yCenter": 1.57, "FAflag": True, "CCDNUM": 4, "Offset": 1500,
+                          "Extension": 3, "Rotation": 180}
+        infoDict["CIN"] = {"xCenter": 0, "yCenter": 1.57, "FAflag": True, "CCDNUM": 2, "Offset": 1500,
                           "Extension": 4, "Rotation": 180}
-        infoDict["CIE"] = {"xCenter": 1.57, "yCenter": 0., "FAflag": True, "CCDNUM": 5, "Offset": 1500,
+        infoDict["CIE"] = {"xCenter": -1.57, "yCenter": 0., "FAflag": True, "CCDNUM": 1, "Offset": 1500,
                           "Extension": 5, "Rotation": 90}
 
         return infoDict
@@ -152,7 +154,7 @@ class desiciinfo(object):
             self.__dict__[key] = state[key]
 
     def getPosition(self, extname, ix, iy):
-        """ return the x,y position in [mm] for a given CCD and pixel number
+        """ return the x,y position in deg on the sky (east is positive) for a given CCD and pixel number
         note that the ix,iy are Image pixels - overscans removed - and start at zero
         """
 
@@ -169,35 +171,40 @@ class desiciinfo(object):
         #xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel
         #yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel
         # Ting: not sure about this 0.5 pixel thing
+        #CD1_1 = CDELT1 * cos (CROTA2)
+        #CD1_2 = -CDELT2 * sin (CROTA2)
+        #CD2_1 = CDELT1 * sin (CROTA2)
+        #CD2_2 = CDELT2 * cos (CROTA2)
 
         # rotation matrix:
         #  XPos - XCen = CD1_1 * (ix - xpixHalfSize + 0.5) + CD1_2 * (iy - ypixHalfSize + 0.5)
         #  YPos - YCen = CD2_1 * (ix - xpixHalfSize + 0.5) + CD2_2 * (iy - ypixHalfSize + 0.5)
+        # but XPos should be -Xpos # updated on Aug 30
+
         if extname == 'CIC':
             xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_c * -1
-            yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_c
+            yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_c * -1
 
         if extname == 'CIS':
-            xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * -1
-            yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r
+            xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * 1
+            yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r * 1
 
         if extname == 'CIE':
-            xPos = ccdinfo["xCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r * -1
+            xPos = ccdinfo["xCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r * 1
             yPos = ccdinfo["yCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * -1
 
         if extname == 'CIN':
-            xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * 1
+            xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * -1
             yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r * -1
 
         if extname == 'CIW':
-            xPos = ccdinfo["xCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r
-            yPos = ccdinfo["yCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t
+            xPos = ccdinfo["xCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel_r * -1
+            yPos = ccdinfo["yCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel_t * 1
 
-        #print "XDECam, YDECam", xPos, yPos
         return xPos, yPos
 
     def getPixel(self, extname, xPos, yPos):
-        """ given a coordinate in [mm], return pixel number
+        """ given a coordinate in deg on the sky (east is positive), return pixel number
         """
 
         ccdinfo = self.infoDict[extname]
@@ -214,25 +221,26 @@ class desiciinfo(object):
         #ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel + xpixHalfSize - 0.5
         #iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel + ypixHalfSize - 0.5
 
+
         if extname == 'CIC':
             ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_c * (-1) + xpixHalfSize - 0.5
-            iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_c + ypixHalfSize - 0.5
+            iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_c * (-1) + ypixHalfSize - 0.5
 
         if extname == 'CIS':
-            ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_t * (-1) + xpixHalfSize - 0.5
-            iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_r + ypixHalfSize - 0.5
+            ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_t * 1 + xpixHalfSize - 0.5
+            iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_r * 1 + ypixHalfSize - 0.5
 
         if extname == 'CIE':
-            iy = (xPos - ccdinfo["xCenter"]) / self.degperpixel_r * (-1) + ypixHalfSize - 0.5
+            iy = (xPos - ccdinfo["xCenter"]) / self.degperpixel_r * 1 + ypixHalfSize - 0.5
             ix = (yPos - ccdinfo["yCenter"]) / self.degperpixel_t * (-1) + xpixHalfSize - 0.5
 
         if extname == 'CIN':
-            ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_t + xpixHalfSize - 0.5
+            ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel_t * (-1) + xpixHalfSize - 0.5
             iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel_r * (-1) + ypixHalfSize - 0.5
 
         if extname == 'CIW':
-            iy = (xPos - ccdinfo["xCenter"]) / self.degperpixel_r + ypixHalfSize - 0.5
-            ix = (yPos - ccdinfo["yCenter"]) / self.degperpixel_t + xpixHalfSize - 0.5
+            iy = (xPos - ccdinfo["xCenter"]) / self.degperpixel_r * (-1) + ypixHalfSize - 0.5
+            ix = (yPos - ccdinfo["yCenter"]) / self.degperpixel_t * 1 + xpixHalfSize - 0.5
 
         return ix, iy
 
@@ -260,49 +268,3 @@ class desiciinfo(object):
         # get to here if we are not inside a chip
         return None
         #return ext # for test purpose, not matter where the position of the star, always return GFA1
-
-
-    def Zer56Rot(self, a5, a6, extname):
-        """
-        Rotate Zernike z5, z6 coefficient from the chip frame to fiducial frame
-        Here the fiducial frame is the same as the frame in CIC -- center chip.
-        """
-        ccdinfo = self.infoDict[extname]
-        rot = ccdinfo['Rotation']
-        rho = numpy.sqrt(a5**2 + a6**2)
-        theta = numpy.arctan(a5 / a6)
-        a5prime = rho * numpy.sin(theta - 2 * rot)
-        a6prime = rho * numpy.cos(theta - 2 * rot)
-        return a5prime, a6prime
-
-    # according to Aaron's notes, z7/z8 and z9/z10 should have no changes for rotation. Need to check why.
-    def Zer78Rot(self, a7, a8, extname):
-        """
-        Rotate Zernike z7, z8 coefficient from the chip frame to fiducial frame
-        Here the fiducial frame is the same as the frame in CIC -- center chip.
-        fixParamArray = [z1,z2,z3,z4,z5,z6,z7,z8,z9,z10,z11]
-        """
-        ccdinfo = self.infoDict[extname]
-        rot = ccdinfo['Rotation']
-        rho = numpy.sqrt(a7**2 + a8**2)
-        theta = numpy.arctan(a7 / a8)
-        a7prime = rho * numpy.sin(theta - rot)
-        a8prime = rho * numpy.cos(theta - rot)
-        return a7prime, a8prime
-
-    def Zer910Rot(self, a9, a10, extname):
-        """
-        Rotate Zernike z9, z10 coefficient from the chip frame to fiducial frame
-        Here the fiducial frame is the same as the frame in CIC -- center chip.
-        fixParamArray = [z1,z2,z3,z4,z5,z6,z7,z8,z9,z10,z11]
-        """
-        ccdinfo = self.infoDict[extname]
-        rot = ccdinfo['Rotation']
-        rho = numpy.sqrt(a9**2 + a10**2)
-        theta = numpy.arctan(a9 / a10)
-        a9prime = rho * numpy.sin(theta - 3 * rot)
-        a10prime = rho * numpy.cos(theta - 3 * rot)
-        return a9prime, a10prime
-
-
-

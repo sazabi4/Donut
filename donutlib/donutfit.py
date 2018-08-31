@@ -14,7 +14,7 @@ import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 from donutlib.donutengine import donutengine
 from donutlib.donututil import loadImage
-from donutlib.donututil import calcStarting
+from donutlib.donututil import calcStarting, Zer56Rot, Zer78Rot, Zer910Rot
 # from donutlib.decamutil import decaminfo
 
 class donutfit(object):
@@ -50,7 +50,7 @@ class donutfit(object):
         self.sigmasq = numpy.ones(1)
 
         # get decam info or desi info
-        if self.paramDict["iTelescope"] == 6:
+        if self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7:
             print('This is for DESI CI')
             from donutlib.desiutil import desiciinfo
             self.dInfo = desiciinfo()
@@ -117,11 +117,12 @@ class donutfit(object):
                             "FN2":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,0.26,0.01,-0.13],
                             "FN3":[0.0,0.0,-11.0,0.0,0.0,0.0,0.0,0.05,-0.25,-0.11],
                             "FN4":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,-0.05,-0.25,-0.14],
-                            "CIC": [0.0, 0.0, -5.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.08],
-                            "CIW": [0.0, 0.0, -5.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.08],
-                            "CIN": [0.0, 0.0, -5.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.08],
-                            "CIS": [0.0, 0.0, -5.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.08],
-                            "CIE":[0.0,0.0,-5.2, 0.0,0.0,0.0,0.0,0.0,0.0,-0.08]}  # adding Zernike for DESI CI, NEED CHANGE TO USE ZEMAX OUTPUT LATER
+                            "CIC": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.04, 0.00],
+                            "CIW": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.04, 0.00],
+                            "CIN": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.00, 0.00],
+                            "CIS": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.00, 0.00],
+                            #"CIS": [0.0, 0.0, -4.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                            "CIE": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.04, 0.00]}  # adding Zernike for DESI CI, NEED CHANGE TO USE ZEMAX OUTPUT LATER
 
         # default Dictionary
         self.fitDict = {"inputImageArray":None,
@@ -176,16 +177,20 @@ class donutfit(object):
             print('extname:', extname, 'ix, iy', ix, iy)
             if extname != 'None':
                 try:
-                    xDECam,yDECam = self.dInfo.getPosition(extname,ix,iy)
-                    print('xDECam, yDECam', xDECam,yDECam)
+                    self.xDECam,self.yDECam = self.dInfo.getPosition(extname,ix,iy)
+                    print('xDECam, yDECam', self.xDECam,self.yDECam)
                 except:
-                    xDECam = 0.
-                    yDECam = 0.
+                    self.xDECam = 0.
+                    self.yDECam = 0.
             else:
-                xDECam = 0.
-                yDECam = 0.
+                self.xDECam = 0.
+                self.yDECam = 0.
 
-            print('Location of the donut in field angles', xDECam, yDECam)
+            print('Location of the donut in field angles', self.xDECam, self.yDECam)
+
+            self.rotate_angle = self.dInfo.info()[extname]['Rotation']
+            print('Rotation angle for extname', extname, ':' , self.rotate_angle)
+
 
             # load the Image AJR 9/14/2012 - now assume we are only running on postage stamps - remove ability to
             # work on full image, never use that anymore...
@@ -284,7 +289,7 @@ class donutfit(object):
 
             # fix parameters as desired
             fixParamArray = self.paramDict["fixedParamArray"+str(iFit+1)]
-            self.updateFit(fixParamArray,xDECam,yDECam)
+            self.updateFit(fixParamArray,self.xDECam,self.yDECam)
             self.doFit()
             outputDict = self.outFit(postfix[iFit])
 
@@ -441,18 +446,48 @@ class donutfit(object):
         except:
             outputDict = {}
 
+
+        outputDict["XPos"] = self.xDECam
+        outputDict["YPos"] = self.yDECam
+
         outputDict["CHI2"] = float(amin.value)
         outputDict["DOF"] = int(dof)
         outputDict["FITSTAT"] = int(icstat.value)
         outputDict["CLKTIME"] = self.deltatime
         outputDict["NCALCALL"] = self.gFitFunc.nCallsCalcAll
         outputDict["NCALCDER"] = self.gFitFunc.nCallsCalcDerivative
-        outputDict["DOF"] = dof
-        
+        #outputDict["DOF"] = dof #commented by Ting (repeated from the DOF above)
+
         for ipar in range(self.gFitFunc.npar):
             outputDict[self.gFitFunc.parNames[ipar]] = float(self.paramArray[ipar])
         for ipar in range(self.gFitFunc.npar):
             outputDict[self.gFitFunc.parNames[ipar]+"E"] = float(self.paramErrArray[ipar])
+
+
+        ##### add the rotations ######
+
+        if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7:
+
+            outputDict['ROT'] = self.rotate_angle  # save the rotation angle to the fits header
+
+            # make a copy of raw ZERNS before rotating -- RZERN
+            for ipar in range(5, self.gFitFunc.npar):
+                outputDict['R'+ self.gFitFunc.parNames[ipar]] = float(self.paramArray[ipar])
+            for ipar in range(5, self.gFitFunc.npar):
+                outputDict['R'+ self.gFitFunc.parNames[ipar] + "E"] = float(self.paramErrArray[ipar])
+            #print(outputDict)
+
+            # print(self.rotate_angle)
+            outputDict['zern5'], outputDict['zern6'], outputDict['zern5E'], outputDict['zern6E'] = Zer56Rot(
+                outputDict['Rzern5'], outputDict['Rzern6'], outputDict['Rzern5E'], outputDict['Rzern6E'], self.rotate_angle)
+            outputDict['zern7'], outputDict['zern8'], outputDict['zern7E'], outputDict['zern8E'] = Zer78Rot(
+                outputDict['Rzern7'], outputDict['Rzern8'], outputDict['Rzern7E'], outputDict['Rzern8E'], self.rotate_angle)
+            outputDict['zern9'], outputDict['zern10'], outputDict['zern9E'], outputDict['zern10E'] = Zer910Rot(
+                outputDict['Rzern9'], outputDict['Rzern10'], outputDict['Rzern9E'], outputDict['Rzern10E'],
+                self.rotate_angle)
+
+        ##############################
+
 
         # make a single output file, with multiple extensions
         # Extension 1:  Calculated Image
