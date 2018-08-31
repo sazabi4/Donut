@@ -299,21 +299,28 @@ void DonutEngine::calcParameters(int iT){
     _lambdaz = _waveLength * _zLength;  
     _fLength = 15.47;
     _pixelSize = 1.0 * 15.0e-6;  // operated in 1x1 mode, 15 micron pixels
-  } else if (iT==5){
+  } else if (iT==5){ // DECI GFAs
     _outerRadius = 0.892; // from Zemax
     _innerRadius = 0.439; // from outerRadius*<innermajoraxis, innerminoraxis>/<outermajoraxis, outerminoraxis>
     _zLength = 6.523858;  // F#3.66
     _lambdaz = _waveLength * _zLength;  
     _fLength = 13.92452; //from Zemax
     _pixelSize = 1.0 * 15.0e-6;  // operated in 1x1 mode, 15 micron pixels
-  } else if (iT==6){
+  } else if (iT==6){ // DECI CIs
     _outerRadius = 0.892; // from Zemax
     _innerRadius = 0.439; // from outerRadius*<innermajoraxis, innerminoraxis>/<outermajoraxis, outerminoraxis>
     _zLength = 6.523858;  // F#3.66
     _lambdaz = _waveLength * _zLength;
     _fLength = 13.92452; //from Zemax
     _pixelSize = 1.0 * 9.0e-6;  // operated in 1x1 mode, 9 micron pixels???? size of wavefront changed, need to understand!!!
-  } 
+  } else if (iT==7){ // a dummy one for testing
+    _outerRadius = 0.892; // from Zemax
+    _innerRadius = 0.439; // from outerRadius*<innermajoraxis, innerminoraxis>/<outermajoraxis, outerminoraxis>
+    _zLength = 6.523858;  // F#3.66
+    _lambdaz = _waveLength * _zLength;
+    _fLength = 13.92452; //from Zemax
+    _pixelSize = 1.0 * 9.0e-6;  // operated in 1x1 mode, 9 micron pixels???? size of wavefront changed, need to understand!!!
+  }
 
   //
   //  here we fix the size of the grid bins on the focal plane to be equal to the 
@@ -933,7 +940,7 @@ void DonutEngine::calcPupilMask(){
     Matrix dyprime(_nbin, _nbin);
     Matrix _rhoellipse(_nbin, _nbin);
 
-    Real spiderWidth = 0.0; //TBD
+    Real spiderWidth = 0.02; //TBD
     //Real invAsq = 0.57245381187;  //inverse square of the major axis of the aperture
     //Real invBsq = 0.53424950221;  //inverse square of the minor axis of the aperture
 
@@ -1010,6 +1017,92 @@ void DonutEngine::calcPupilMask(){
     } 
     
     
+  }
+    else if (_iTelescope==7){  //dummy case for test, no vignetting.
+    // build the pupil Mask
+    Matrix dx(_nbin,_nbin);
+    Matrix dy(_nbin,_nbin);
+    dx = _xaxis;
+    dy = _yaxis;
+
+    Matrix rhoprime(_nbin,_nbin);
+    Matrix dxprime(_nbin, _nbin);
+    Matrix dyprime(_nbin, _nbin);
+    Matrix _rhoellipse(_nbin, _nbin);
+
+    Real spiderWidth = 0.1; //TBD
+    //Real invAsq = 0.57245381187;  //inverse square of the major axis of the aperture
+    //Real invBsq = 0.53424950221;  //inverse square of the minor axis of the aperture
+
+    Real invAsq = 0.55;  //inverse square of the major axis of the aperture
+    Real invBsq = 0.65;  //inverse square of the minor axis of the aperture
+
+
+    // create a grid for the aperture ellipse
+    for (int i=0; i<_nbin * _nbin; i++){
+      _rhoellipse(i) = sqrt(_xaxis(i)*_xaxis(i)*invAsq + _yaxis(i) * _yaxis(i) * invBsq) / _outerRadius;
+    }
+
+    Matrix spiderMask(_nbin,_nbin);
+    Matrix annulusMask(_nbin,_nbin);
+
+    Real a = 0.97;
+    Real b = 0.94;
+
+    Real invasq = 1. / pow(a*1.37, 2);  // inverse square of obscuration major axis
+    Real invbsq = 1. / pow(b*1.37, 2);  // inverse square of obscuration minor axis
+    Real cy = -0.165;   // center of obscuration ellipse on y axis
+    Real cx = 0.;   // center of oscuration ellipse on x axis
+
+    //calculate angle of rotation of obscuration ellipse
+    Real phi = 0.;
+
+    // calculate the slope and intercept of the vignetting feature, i.e. "bite"
+    Real biteslope =  0;
+    Real biteint   =  -1.05;
+
+    if (_printLevel>=2){
+      std::cout << "DonutEngine: calcPupilMask biteslope,biteint = " << biteslope << " " << biteint << std::endl;
+    }
+    // Declare a few variables we need for the mask loop below
+    Real lhs;
+    Real rhs;
+    Real bitex;
+    Real bitey;
+
+    for (int i=0;i<_nbin*_nbin;i++){
+        // build a mask for the obscuration ellipse
+	lhs = cos(phi) * (dx(i) - cx) + (dy(i) - cy) * sin(phi);
+	rhs = sin(phi) * (dx(i) - cx) - (dy(i) - cy) * cos(phi);
+	rhoprime(i) = sqrt(lhs * lhs * invasq + rhs * rhs * invbsq) / _innerRadius;
+
+	// rotate by 45deg, cut around spiderWidth, rotate back
+	dxprime(i) = dx(i) * cos(_M_PI_4) - dy(i) * sin(_M_PI_4);
+	dyprime(i) = dx(i) * sin(_M_PI_4) + dy(i) * cos(_M_PI_4);
+
+
+	if ( fabs(dxprime(i))<spiderWidth ||  fabs(dyprime(i))<spiderWidth ){
+	  spiderMask(i) = 0.0;
+	} else {
+	  spiderMask(i) = 1.0;
+	}
+
+	// pupil plane with central obscuration
+	if ( _rhoellipse(i)<1.0 && rhoprime(i)>1. ){
+	  annulusMask(i) = 1.0;
+	} else {
+	  annulusMask(i) = 0.0;
+	}
+
+	// combine spider and annulus
+	if (spiderMask(i)==1.0 && annulusMask(i)==1.0){
+	  _pupilMask(i) = 1.0;
+	} else {
+	  _pupilMask(i) = 0.0;
+	}
+    }
+
+
   }
   else {
       // input parameters will define pupilMask
