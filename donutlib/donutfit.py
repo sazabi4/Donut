@@ -50,7 +50,7 @@ class donutfit(object):
         self.sigmasq = numpy.ones(1)
 
         # get decam info or desi info
-        if self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7:
+        if self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7 or self.paramDict["iTelescope"] == 8:
             print('This is for DESI CI')
             from donutlib.desiutil import desiciinfo
             self.dInfo = desiciinfo()
@@ -117,12 +117,15 @@ class donutfit(object):
                             "FN2":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,0.26,0.01,-0.13],
                             "FN3":[0.0,0.0,-11.0,0.0,0.0,0.0,0.0,0.05,-0.25,-0.11],
                             "FN4":[0.0,0.0,11.0,0.0,0.0,0.0,0.0,-0.05,-0.25,-0.14],
-                            "CIC": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.04, 0.00],
-                            "CIW": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.04, 0.00],
-                            "CIN": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.00, 0.00],
-                            "CIS": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.00, 0.00],
+                            "CIC": [0.0, 0.0, -5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10, 0.00, 0.00, 0.00, 0.00],
+                            "CIW": [0.0, 0.0, -5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10, 0.00, 0.00, 0.00, 0.00],
+                            "CIN": [0.0, 0.0, -5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10, 0.00, 0.00, 0.00, 0.00],
+                            "CIS": [0.0, 0.0, -5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10, 0.00, 0.00, 0.00, 0.00],
                             #"CIS": [0.0, 0.0, -4.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            "CIE": [0.0, 0.0, -4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.07, 0.00, 0.00, 0.04, 0.00]}  # adding Zernike for DESI CI, NEED CHANGE TO USE ZEMAX OUTPUT LATER
+                            "CIE": [0.0, 0.0, -5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10, 0.00, 0.00, 0.00, 0.00]}  # adding Zernike for DESI CI, NEED CHANGE TO USE ZEMAX OUTPUT LATER
+
+        #always start at the smaller end for z4. e.g. start with 4 if z4 = 4.5, start with -5 if z4 = -4.5, etc.
+
 
         # default Dictionary
         self.fitDict = {"inputImageArray":None,

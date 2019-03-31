@@ -68,8 +68,16 @@ class makedonut(object):
         # this translates into requiring that (Lambda F / pixelSize) * pixelOverSample * scaleFactor > 1
         # Why does this depend on scaleFactor, but not Z4?? Answer: scaleFactor effectively changes the wavelength, so 
         # it must be included.  It is also possible that Z4 is too big for the nPixels - buts that another limit than this one
-        F = 2.9  # hardcode for DECam for now
-        pixelSize = 15.e-6 
+        if self.paramDict['iTelescope'] <= 4:
+            F = 2.9  # hardcode for DECam for now
+            pixelSize = 15.e-6
+        elif self.paramDict['iTelescope'] == 5:
+            F = 3.66
+            pixelSize = 15.e-6
+        elif self.paramDict['iTelescope'] == 6 or self.paramDict['iTelescope'] == 7 or self.paramDict['iTelescope'] == 8:
+            F = 3.66
+            pixelSize = 9.e-6
+
         if self.paramDict["pixelOverSample"] * self.paramDict["scaleFactor"] * (self.paramDict["waveLength"] * F / pixelSize) < 1. :
             print("makedonut:  ERROR pupil doesn't fit!!!")
             print("            value = ",self.paramDict["pixelOverSample"] * self.paramDict["scaleFactor"] * (self.paramDict["waveLength"] * F / pixelSize))
@@ -86,13 +94,13 @@ class makedonut(object):
         self.gFitFunc = donutengine(**self.paramDict)
 
         # DECam info or DESI info
-        if self.paramDict['iTelescope'] == 0:
+        if self.paramDict['iTelescope'] <= 4:
             from donutlib.decamutil import decaminfo
             self.dinfo = decaminfo()
         elif self.paramDict['iTelescope'] == 5:
             from donutlib.desiutil import desiinfo
             self.dinfo = desiinfo()
-        elif self.paramDict['iTelescope'] == 6 or self.paramDict['iTelescope'] == 7 :
+        elif self.paramDict['iTelescope'] == 6 or self.paramDict['iTelescope'] == 7 or self.paramDict['iTelescope'] == 8:
             from donutlib.desiutil import desiciinfo
             self.dinfo = desiciinfo()
         else:
@@ -111,7 +119,7 @@ class makedonut(object):
         # convert this position to extname,ix,iy
         # Note: x=0,y=0 is in between sensors.  IF this is used, then just set these by hand
         if X==0.0 and Y==0.0:
-            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7:
+            if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7 or self.paramDict["iTelescope"] == 8:
                 self.extname = "CIC"
                 self.ix = 1536
                 self.iy = 1024
@@ -241,6 +249,7 @@ class makedonut(object):
                 prihdr.set("XDECAM",self.paramDict["xDECam"],"Target xposition (mm) in focal plane")
                 prihdr.set("YDECAM", self.paramDict["yDECam"], "Target yposition (mm) in focal plane")
 
+            prihdr.set("IFILE",self.paramDict["expid"])
             prihdr.set("EXTNAME",self.extname)
             prihdr.set("IX",self.ix)
             prihdr.set("IY",self.iy)

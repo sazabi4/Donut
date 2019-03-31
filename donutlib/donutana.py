@@ -1,12 +1,14 @@
 import numpy
 import scipy
 import time
-import pyfits
+from astropy.io import fits as pyfits
 import copy
 import statsmodels.api as sm
 import os.path
 from donutlib.PointMesh import PointMesh
-from .decamutil import decaminfo 
+from .decamutil import decaminfo
+from .desiutil import desiinfo
+from .desiutil import desiciinfo 
 from .decamutil import mosaicinfo
 try:
     from ROOT import TTree, TFile, gROOT, TCanvas, gStyle, TGraph2D, TGraphErrors, SetOwnership
@@ -89,9 +91,13 @@ class donutana(object):
 
         # get DECam geometry information
         if self.paramDict["sensorSet"] == "ScienceOnly" or self.paramDict["sensorSet"] == "FandAOnly" or self.paramDict["sensorSet"] == "PlusOnly" or self.paramDict["sensorSet"] == "MinusOnly"  :
-            self.infoObj = decaminfo()
+             self.infoObj = decaminfo()
+        elif self.paramDict["sensorSet"] == "CI" :
+            self.infoObj = desiciinfo()
+        elif self.paramDict["sensorSet"] == "GFA" :
+            self.infoObj = desiinfo()
         else:
-            print("HEY FOOL, set either ScienceOnly or FandAOnly !!!!")
+            print("HEY FOOL, set either ScienceOnly or FandAOnly for DECam, CI or GFA FOR DESI !!!!")
             exit()
             self.infoObj = mosaicinfo()
             
@@ -102,14 +108,15 @@ class donutana(object):
         self.gridDict = {}
 
         #  Code for crude vignetting cut - now obsolete
-        if self.paramDict["unVignettedOnly"]:
-            limitsFA = {"FS1":[0,1024],"FS2":[0,1024],"FS3":[0,1024],"FS4":[0,1024],
-                        "FN1":[-1024,0],"FN2":[-1024,0],"FN3":[-1024,0],"FN4":[-1024,0]}
-        else:
-            limitsFA = {"FS1":[-1024,1024],"FS2":[-1024,1024],"FS3":[-1024,1024],"FS4":[-1024,1024],
-                        "FN1":[-1024,1024],"FN2":[-1024,1024],"FN3":[-1024,1024],"FN4":[-1024,1024]}
+        #if self.paramDict["unVignettedOnly"]:
+        #    limitsFA = {"FS1":[0,1024],"FS2":[0,1024],"FS3":[0,1024],"FS4":[0,1024],
+        #                "FN1":[-1024,0],"FN2":[-1024,0],"FN3":[-1024,0],"FN4":[-1024,0]}
+        #else:
+        #    limitsFA = {"FS1":[-1024,1024],"FS2":[-1024,1024],"FS3":[-1024,1024],"FS4":[-1024,1024],
+        #                "FN1":[-1024,1024],"FN2":[-1024,1024],"FN3":[-1024,1024],"FN4":[-1024,1024]}
 
         # build list of ccds - options are FandAOnly, ScienceOnly, All
+        # options for DECam sensor set don't seem consistent
         if self.paramDict["sensorSet"] == "FandAOnly" :
             for ccd in list(self.info.keys()):
                 ccdinfo = self.info[ccd]
@@ -133,8 +140,15 @@ class donutana(object):
         elif  self.paramDict["sensorSet"] == "Both":
             for ccd in list(self.info.keys()):
                 self.coordList.append(ccd)
+        # these are for DESI. So far identical, but we may want more options
+        elif  self.paramDict["sensorSet"] == "CI":
+            for ccd in list(self.info.keys()):
+                self.coordList.append(ccd)
+        elif  self.paramDict["sensorSet"] == "GFA":
+            for ccd in list(self.info.keys()):
+                self.coordList.append(ccd)
         else:
-            print("donutana.py: HEY FOOL, you have to specify FandAOnly, ScienceOnly, or Both")
+            print("donutana.py: HEY FOOL, you have to specify FandAOnly, ScienceOnly, or Both for DECam, CI or GFA for DESI")
             exit()
 
         # reset doRzero based on sensorSet - why do this?
@@ -144,20 +158,38 @@ class donutana(object):
         # loop over ccds
         for ccd in self.coordList:
             ccdinfo = self.info[ccd]
-            # either FA sensors or Science sensors
-            if  ( ccdinfo["FAflag"] ):
-
-                xlo = ccdinfo["xCenter"] - 1024 * self.infoObj.mmperpixel
-                xhi = ccdinfo["xCenter"] + 1024 * self.infoObj.mmperpixel
+            # either CI sensors or GFA sensors for DESI
+            if self.paramDict["sensorSet"] == "CI":
+                # should we be making this grid in mm or in degrees?!?
+                # i think degrees
+                #xlo = ccdinfo["xCenter"] - 1536 * self.infoObj.mmperpixel
+                #xhi = ccdinfo["xCenter"] + 1536 * self.infoObj.mmperpixel
                 
-                ylo = ccdinfo["yCenter"] - 1024 * self.infoObj.mmperpixel
-                yhi = ccdinfo["yCenter"] + 1024 * self.infoObj.mmperpixel
+                #ylo = ccdinfo["yCenter"] - 1024 * self.infoObj.mmperpixel
+                #yhi = ccdinfo["yCenter"] + 1024 * self.infoObj.mmperpixel
 
+                xlo = ccdinfo["xCenter"] - 1536 * ccdinfo['degperpix_x']
+                xhi = ccdinfo["xCenter"] + 1536 * ccdinfo['degperpix_x']
+
+                ylo = ccdinfo["yCenter"] - 1024 * ccdinfo['degperpix_y']
+                yhi = ccdinfo["yCenter"] + 1024 * ccdinfo['degperpix_y']
+                
+                # fill gridDict
+                self.gridDict[ccd] = [self.paramDict["nInterpGrid"],ylo,yhi,self.paramDict["nInterpGrid"],xlo,xhi]
+                
+            if self.paramDict["sensorSet"] == "GFA":
+
+                xlo = ccdinfo["xCenter"] - 512 * self.infoObj.mmperpixel
+                xhi = ccdinfo["xCenter"] + 512 * self.infoObj.mmperpixel
+                
+                ylo = ccdinfo["yCenter"] - 512 * self.infoObj.mmperpixel
+                yhi = ccdinfo["yCenter"] + 512 * self.infoObj.mmperpixel
+                
                 # fill gridDict
                 self.gridDict[ccd] = [self.paramDict["nInterpGrid"],ylo,yhi,self.paramDict["nInterpGrid"],xlo,xhi]
 
             elif ( self.paramDict["sensorSet"] == "ScienceOnly" and not ccdinfo["FAflag"] ):
-
+                # this is for DECam
                 xlo = ccdinfo["xCenter"] - 1024 * self.infoObj.mmperpixel
                 xhi = ccdinfo["xCenter"] + 1024 * self.infoObj.mmperpixel
                 ylo = ccdinfo["yCenter"] - 2048 * self.infoObj.mmperpixel
@@ -241,8 +273,13 @@ class donutana(object):
                     extname = donut["EXTNAME"]
                 except:
                     extname = str(donut["IEXT"]-1) 
-                    
-                ifile = donut["IFILE"]
+
+                # I dont think ifile is used, its not in the fits headers, so kludge
+                try:
+                    ifile = donut["IFILE"]
+                except:
+                    ifile = 0
+    
                 zern4 = donut["ZERN4"]
                 zern5 = donut["ZERN5"]
                 zern6 = donut["ZERN6"]
@@ -344,10 +381,13 @@ class donutana(object):
             else:
                 if eval(self.paramDict["donutCutString"] + " and " + extraCut):
                     good = True
+               
 
             # good Donut
             if good and extname in bigDict["z4"]:
                 xval,yval = self.infoObj.getPosition(extname,ix,iy)
+                #debugstr = extname  +' '+'{:d}'.format(ix)+' '+'{:d}'.format(iy)+' '+'{:.3f}'.format(xval)+' '+'{:.3f}'.format(yval)+'\n'
+                #print(debugstr)
                 # convert from z4 to dz
                 dz = zern4 * self.paramDict["z4Conversion"]
                 wgt = 1.0
@@ -380,8 +420,6 @@ class donutana(object):
                 for key in list(bigDict.keys()):
                     bigDict[key][extname].append(pntsDict[key])
                     
-
-
         # convert all the lists to numpy arrays
         allPointsDict = {}
         for key in list(bigDict.keys()):
@@ -497,6 +535,12 @@ class donutana(object):
         for key in list(dictOfMeshesCopy.keys()):
             donutDict[key] = dictOfMeshesCopy[key]
 
+        # cmr add X and Y coords
+        keylist = list(dictOfResults.keys())
+        key0 = keylist[0]
+        dict0 = dictOfResults[key0]
+        donutDict['deltaArrayX'] = dict0['deltaArrayX']
+        donutDict['deltaArrayY'] = dict0['deltaArrayY']
 
         # make a Canvas of plots for this image
         # plot Histogram of Difference before fit, after fit, and after fit vs. X,Y position
@@ -523,7 +567,7 @@ class donutana(object):
                     nWavesBefore = 200.0
                     nWavesAfter = 200.0
                 else:
-                    nWavesBefore = 1.0
+                    nWavesBefore = 2.0
                     nWavesAfter = 0.2
 
                 if keyId!="rzero":

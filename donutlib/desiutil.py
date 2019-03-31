@@ -106,12 +106,12 @@ class desiinfo(object):
 
 
 class desiciinfo(object):
-    """ desiinfo is a class used to contain DESI FGA geometry information and various utility routines
+    """ desiciinfo is a class used to contain DESI CI geometry information and various utility routines
 
     """
 
     def info(self):
-        """info returns a dictionary chock full of info on the DESI FGA geometry
+        """info returns a dictionary chock full of info on the DESI CI geometry
         keyed by the CCD name
         """
 
@@ -130,6 +130,9 @@ class desiciinfo(object):
                           "Extension": 4, "Rotation": 180}
         infoDict["CIE"] = {"xCenter": -1.57, "yCenter": 0., "FAflag": True, "CCDNUM": 1, "Offset": 1500,
                           "Extension": 5, "Rotation": 90}
+
+        # offset 1500 is 1.5 mm. Does not matter for CI instrument but should be set for GFAs +/- 1500
+        # FAflag should be true for all focus and alignment chip.
 
         return infoDict
 
