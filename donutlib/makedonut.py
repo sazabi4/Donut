@@ -8,8 +8,8 @@
 #
 import numpy
 import scipy
-import pyfits
-#from astropy.io import fits as pyfits
+#import pyfits
+from astropy.io import fits as pyfits
 from array import array
 import argparse
 import pdb
@@ -32,6 +32,7 @@ class makedonut(object):
 
         # initialize the parameter Dictionary, and update defaults from inputDict
         self.paramDict = {"inputFile":"",
+                          "expid":'-9999',
                           "wfmFile":"",
                           "wfmArray":None,
                           "writeToFits":False,

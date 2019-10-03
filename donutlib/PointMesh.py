@@ -11,7 +11,9 @@ from scipy.interpolate.rbf import Rbf
 from scipy.interpolate import griddata
 from scipy.spatial import cKDTree
 from donutlib.IDWInterp import IDWInterp
-from donutlib.decamutil import decaminfo
+#from donutlib.decamutil import decaminfo
+from donutlib.desiutil import desiinfo
+from donutlib.desiutil import desiciinfo 
 import bisect
 
 try:
@@ -52,6 +54,9 @@ class PointMesh(object):
                            'z': numpy.float64, 'w': numpy.float64},
                     names=['Sensor', 'x', 'y', 'z', 'w'])
 
+        # i think this is the equivalent if Pandas doesn't exist
+        #dataPoints = np.genfromtxt(fileName, delimiter=' ', header=None, dtype={'Sensor': '|S3', 'x': numpy.float64, 'y': numpy.float64, 'z': numpy.float64, 'w': numpy.float64}, names=['Sensor', 'x', 'y', 'z', 'w'])
+        
         # convert the raw pandas format to a dictionary keyed by sensor name
         # containing a numpy array of x,y,z,w
         self.pointsArray = {}
@@ -85,8 +90,8 @@ class PointMesh(object):
         # vignetting  HARDCODED
         self.radiusVignetted = 225.0
 
-        # decam info
-        self.decam = decaminfo()
+        # desici info
+        self.desici = desiciinfo()
 
         # Array with interpolation grid size and number of points
         # should contain a 4 tuple of [ny,ylo,yhi,nx,xlo,xhi] for each nCoord
@@ -117,7 +122,7 @@ class PointMesh(object):
 
     def __getstate__(self):
         stateDict = {}
-        keysToPickle = ['nCoord','gridArray','radiusVignetted','pointsArray','myMethod','coordList','debugFlag','methodVal','title','decam']
+        keysToPickle = ['nCoord','gridArray','radiusVignetted','pointsArray','myMethod','coordList','debugFlag','methodVal','title','desici']
         for key in keysToPickle:
             stateDict[key] = self.__dict__[key]
         return stateDict
@@ -720,7 +725,7 @@ class PointMesh(object):
     def format_coord(self, x, y):
         """ given x,y find z value from the interpolation grid
         """
-        extname = self.decam.getSensor(x,y)
+        extname = self.desici.getSensor(x,y)
         if extname==None:
             return     'x=%1.4f, y=%1.4f               '%(x, y)
         else:

@@ -2,7 +2,8 @@ import numpy
 import time
 from numpy.lib.stride_tricks import as_strided as ast
 from scipy.spatial import cKDTree
-from donutlib.decamutil import decaminfo
+#from donutlib.decamutil import decaminfo
+from donutlib.desiutil import desiciinfo
 import pdb
 
 def block_view(A, block= (8, 8)):
@@ -63,7 +64,7 @@ def findDonuts(dataAmp,xOffset,inputDict,extName):
     ellipCut = inputDict["ellipCut"]
 
     # info about CCDs
-    dinfo = decaminfo()
+    dinfo = desiciinfo()
 
     # time it
     startingTime = time.clock()
@@ -229,21 +230,23 @@ def dfdFinder(hdulist,extName,inputDict={}):
     # we only want the image portion, drop the overscan
     # HARDCODED!!!
     # and get the two amplifiers separately, since we do no overscan,flat or bias correction
-    if extName == "FS4" or extName == "FN4":
-        dataAmpB = data[0:2048,56:1080]
-        dataAmpA = data[0:2048,1080:2104]
-    else:
-        dataAmpB = data[50:2098,56:1080]
-        dataAmpA = data[50:2098,1080:2104]
+#    if extName == "FS4" or extName == "FN4":
+#        dataAmpB = data[0:2048,56:1080]
+#        dataAmpA = data[0:2048,1080:2104]
+#    else:
+#        dataAmpB = data[50:2098,56:1080]
+#        dataAmpA = data[50:2098,1080:2104]
+    dataAmpA = data[0:2047,0:3071]
 
     # find em
-    donutListA = findDonuts(dataAmpA,1080,defaultDict,extName)
-    donutListB = findDonuts(dataAmpB,56,defaultDict,extName)
+    donutListA = findDonuts(dataAmpA,0,defaultDict,extName)
+#    donutListB = findDonuts(dataAmpB,0,defaultDict,extName)
 
     # done
     print("dfdFinder took ",time.clock()-startingTime," seconds")
 
-    donutList = donutListA + donutListB
+#    donutList = donutListA + donutListB
+    donutList = donutListA
     return donutList
     
 
@@ -260,7 +263,8 @@ def listToregion(dList,regionFileName="temp.reg"):
     for donutDict in dList:
         try:
             ix = donutDict["x"]
-            iy = donutDict["y"] + 51
+#            iy = donutDict["y"] + 51
+            iy = donutDict["y"] 
             regf.write("image; ellipse(%d,%d,%.5f,%.5f,%.5f)\n" % (ix,iy,10.0,10.0,0.))
         except:
             print(donutDict)

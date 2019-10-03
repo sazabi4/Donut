@@ -3,7 +3,7 @@ import scipy
 import time
 from astropy.io import fits as pyfits
 import copy
-import statsmodels.api as sm
+#import statsmodels.api as sm
 import os.path
 from donutlib.PointMesh import PointMesh
 from .decamutil import decaminfo
@@ -27,48 +27,33 @@ class donutana(object):
 
         # default values for calibration information
 
-        #  see doit.txt file 10/14/2012
-        #  comes from 20120914seq1 suplmented by 20121001seq1 for tilts
-        #  I've rounded to 2 sig. figures, removed elements to correct for 15deg rotation,
-        #  symmetrized, then added the LR sub-matrix to match Zemax,
-        #  then finally inverted and rounded.
-        #  
-        #  hexapodM = 
-        #      matrix ([[  0.0e+00,  -2.6e+05,   4.5e+03,   0.0e+00],
-	#               [ -2.6e+05,  -0.0e+00,  -0.0e+00,  -4.5e+03],
-       	#               [ -5.3e+04,  -0.0e+00,  -0.0e+00,  -9.8e+01],
-        #               [  0.0e+00,   5.3e+04,  -9.8e+01,   0.0e+00]])
+        # z4Conversion convert from waves of z4 at 700 nm to microns of motion of the hexapod
+        # value for DESI is 154 microns/wave
 
-        hexapodArrayDiagonal = numpy.array(((  0.0e+00,  -2.6e+05,   4.5e+03,   0.0e+00),
-                                    ( -2.6e+05,   0.0e+00,   0.0e+00,  -4.5e+03),
-                                    ( -5.3e+04,   0.0e+00,   0.0e+00,  -9.8e+01),
-                                    (  0.0e+00,   5.3e+04,  -9.8e+01,   0.0e+00)))
-
-        # now replace this with the array from the actual measurements, which
-        # still includes the 15deg hexapod rotation
-
-        hexapodArrayRotated =  numpy.array(((-1.9e5, -1.6e5,  4.1e3, -1.3e3),
-                                     (-1.6e5,  1.9e5, -1.3e3, -4.1e3),
-                                     (-4.8e4,  1.6e4,  -30. ,  -88.),
-                                     ( 1.6e4,  4.8e4,  -88. ,  30. )))
-
+        # hexapodArray20121020 is for DECam. Kept here for reference. See DESI donut doc for
+        # how to compare the DESI and DECam matrices
         hexapodArray20121020 = numpy.array(((  0.00e+00 ,  1.07e+05 ,  4.54e+03 ,  0.00e+00),
                                             (  1.18e+05 , -0.00e+00 ,  0.00e+00 , -4.20e+03),
                                             ( -4.36e+04 ,  0.00e+00 ,  0.00e+00 , -8.20e+01),
                                             (  0.00e+00 ,  4.42e+04 , -8.10e+01 ,  0.00e+00) ))
+
+        desiModelHexapodArray = numpy.array(((-1.06e+03 ,  0.00e+00 ,  0.00e+00 ,  3.71e+03),
+                                             ( 0.00e+00 ,  1.06e+00 , -3.71e+03 ,  0.00e+00),
+                                             ( 0.00e+00 , -2.27e+02 , -8.74e+01 ,  0.00e+00),
+                                             (-2.27e+02 ,  0.00e+00 ,  0.00e+00 , -8.74e+01) ))
                  
-        self.paramDict  = {"z4Conversion":172.0,
+        self.paramDict  = {"z4Conversion":154.0,
                            "deltaZSetPoint":0.0,
-                           "alignmentMatrix":hexapodArray20121020,
+                           "alignmentMatrix":desiModelHexapodArray,
                            "zPointsFile":"",
-                           "z4PointsFile":"",
-                           "z5PointsFile":"",
-                           "z6PointsFile":"",
-                           "z7PointsFile":"",
-                           "z8PointsFile":"",
-                           "z9PointsFile":"",
-                           "z10PointsFile":"",
-                           "z11PointsFile":"",
+                           "z4PointsFile":"z4Mesh.dat",
+                           "z5PointsFile":"z5Mesh.dat",
+                           "z6PointsFile":"z6Mesh.dat",
+                           "z7PointsFile":"z7Mesh.dat",
+                           "z8PointsFile":"z8Mesh.dat",
+                           "z9PointsFile":"z9Mesh.dat",
+                           "z10PointsFile":"z10Mesh.dat",
+                           "z11PointsFile":"z11Mesh.dat",
                            "z12PointsFile":"",
                            "z13PointsFile":"",
                            "z14PointsFile":"",
@@ -77,7 +62,7 @@ class donutana(object):
                            "interpMethod":"idw",
                            "methodVal":None,
                            "donutCutString":"",
-                           "sensorSet":"FandAOnly",    # or "ScienceOnly" or "Mosaic"
+                           "sensorSet":"CI",    # for DESI, CI or GFA
                            "unVignettedOnly":False,
                            "doTrefoil":False,
                            "doSpherical":False,
@@ -106,14 +91,6 @@ class donutana(object):
         # fill PointMesh coordinate list and gridDict
         self.coordList = []
         self.gridDict = {}
-
-        #  Code for crude vignetting cut - now obsolete
-        #if self.paramDict["unVignettedOnly"]:
-        #    limitsFA = {"FS1":[0,1024],"FS2":[0,1024],"FS3":[0,1024],"FS4":[0,1024],
-        #                "FN1":[-1024,0],"FN2":[-1024,0],"FN3":[-1024,0],"FN4":[-1024,0]}
-        #else:
-        #    limitsFA = {"FS1":[-1024,1024],"FS2":[-1024,1024],"FS3":[-1024,1024],"FS4":[-1024,1024],
-        #                "FN1":[-1024,1024],"FN2":[-1024,1024],"FN3":[-1024,1024],"FN4":[-1024,1024]}
 
         # build list of ccds - options are FandAOnly, ScienceOnly, All
         # options for DECam sensor set don't seem consistent
@@ -151,10 +128,6 @@ class donutana(object):
             print("donutana.py: HEY FOOL, you have to specify FandAOnly, ScienceOnly, or Both for DECam, CI or GFA for DESI")
             exit()
 
-        # reset doRzero based on sensorSet - why do this?
-        #if self.paramDict["sensorSet"] != "FandAOnly":
-        #    self.paramDict["doRzero"] = False
-
         # loop over ccds
         for ccd in self.coordList:
             ccdinfo = self.info[ccd]
@@ -162,17 +135,25 @@ class donutana(object):
             if self.paramDict["sensorSet"] == "CI":
                 # should we be making this grid in mm or in degrees?!?
                 # i think degrees
-                #xlo = ccdinfo["xCenter"] - 1536 * self.infoObj.mmperpixel
-                #xhi = ccdinfo["xCenter"] + 1536 * self.infoObj.mmperpixel
+                xlo = ccdinfo["xCenter"] - 1536 * self.infoObj.mmperpixel
+                xhi = ccdinfo["xCenter"] + 1536 * self.infoObj.mmperpixel
                 
-                #ylo = ccdinfo["yCenter"] - 1024 * self.infoObj.mmperpixel
-                #yhi = ccdinfo["yCenter"] + 1024 * self.infoObj.mmperpixel
+                ylo = ccdinfo["yCenter"] - 1024 * self.infoObj.mmperpixel
+                yhi = ccdinfo["yCenter"] + 1024 * self.infoObj.mmperpixel
 
-                xlo = ccdinfo["xCenter"] - 1536 * ccdinfo['degperpix_x']
-                xhi = ccdinfo["xCenter"] + 1536 * ccdinfo['degperpix_x']
+                #xlo = ccdinfo["xCenter"] - 1536 * ccdinfo['degperpix_x']
+                #xhi = ccdinfo["xCenter"] + 1536 * ccdinfo['degperpix_x']
 
-                ylo = ccdinfo["yCenter"] - 1024 * ccdinfo['degperpix_y']
-                yhi = ccdinfo["yCenter"] + 1024 * ccdinfo['degperpix_y']
+                #ylo = ccdinfo["yCenter"] - 1024 * ccdinfo['degperpix_y']
+                #yhi = ccdinfo["yCenter"] + 1024 * ccdinfo['degperpix_y']
+
+                # would be good not to have to deal with how radial and
+                # tangential and x/y mapping changes for CCD
+                #degperpix = 0.5*(ccdinfo['degperpix_x'] + ccdinfo['degperpix_y'])
+                #xlo = ccdinfo["xCenter"] - 1536 * degperpix
+                #xhi = ccdinfo["xCenter"] + 1536 * degperpix
+                #ylo = ccdinfo["yCenter"] - 1024 * degperpix
+                #yhi = ccdinfo["yCenter"] + 1024 * degperpix
                 
                 # fill gridDict
                 self.gridDict[ccd] = [self.paramDict["nInterpGrid"],ylo,yhi,self.paramDict["nInterpGrid"],xlo,xhi]
@@ -364,7 +345,7 @@ class donutana(object):
                 except:
                     rzero = 0.
 
-            # compound cut for 2 bad amplifiers needed
+            # compound cut for 2 bad DECam amplifiers needed
             ampOk = True
             if extname=="FS4" and ix>1024 and numpy.log10(nele)>5.7:
                 ampOk = False

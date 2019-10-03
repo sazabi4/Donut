@@ -15,11 +15,33 @@ class desiinfo(object):
         keyed by the CCD name
         """
 
-        infoDict = OrderedDict()
+        f = open('GFA_CDs.txt')
+        tmp = f.readlines()
+        infoDict = numpy.zeros(10, dtype=[('PETAL', '<i4'), ('CRVAL1', '<f8'), ('CRVAL2', '<f8'), ('CRPIX1', '<f8'),
+                                   ('CRPIX2', '<f8'), ('CD1_1', '<f8'), ('CD1_2', '<f8'), ('CD2_1', '<f8'),
+                                   ('CD2_2', '<f8'), ('FAflag', 'bool'), ('Offset', '<f8'), ('EXTNAME', 'S6')])
+        # need to update here: the sign for offset depend on the ix pixel value
+        infoDict['Offset'] = 1500.
+
+        k = -1
+        for i in tmp:
+            if '=' in i:
+                a = str(i.split('=')[0]).replace(' ', '')
+                b = float(i.split('=')[1])
+                if a == 'PETAL':
+                    k += 1
+                infoDict[a][k] = b
+
+        #assign ones are Focus Alignment Chips
+        for i in [1, 3, 6, 8]:
+            infoDict['FA_FLAG'][i] = 1
+
+        infoDict['EXTNAME'] = numpy.array(['petal' + i for i in infoDict['PETAL'].astype('str')])
+        #infoDict = OrderedDict()
 
         # store a dictionary for each CCD, keyed by the CCD name
-        infoDict["GFA1"] = {"xCenter": 1.318, "yCenter": 0.86, "FAflag": True, "CCDNUM": 1, "Offset": 1500,
-                          "Extension": 1}
+        #infoDict["GFA1"] = {"xCenter": 1.318, "yCenter": 0.86, "FAflag": True, "CCDNUM": 1, "Offset": 1500,
+        #                  "Extension": 1}
 
         return infoDict
 
@@ -31,7 +53,7 @@ class desiinfo(object):
 
     def __getstate__(self):
         stateDict = {}
-        keysToPickle = ['infoDict', 'degperpixel', 'rClear']
+        keysToPickle = ['infoDict','rClear']
         for key in keysToPickle:
             stateDict[key] = self.__dict__[key]
         return stateDict
@@ -41,42 +63,43 @@ class desiinfo(object):
             self.__dict__[key] = state[key]
 
     def getPosition(self, extname, ix, iy):
-        """ return the x,y position in [mm] for a given CCD and pixel number
+        """ return the x,y position in angle (degree) for a given petal and pixel number
         note that the ix,iy are Image pixels - overscans removed - and start at zero
         """
 
-        ccdinfo = self.infoDict[extname]
+        ccdinfo = self.infoDict[self.infoDict['EXTNAME'] == extname]
+        print(ccdinfo)
 
         # CCD size in pixels
         if ccdinfo["FAflag"]:
-            xpixHalfSize = 512.
+            xpixHalfSize = 1024.
             ypixHalfSize = 512.
         else:
-            print('WE ONLY HAVE FAflag CHIPS HERE!')
+            print('WRONG! WE ONLY HAVE FAflag CHIPS HERE!')
 
-        # calculate positions
-        xPos = ccdinfo["xCenter"] + (float(ix) - xpixHalfSize + 0.5) * self.degperpixel
-        yPos = ccdinfo["yCenter"] + (float(iy) - ypixHalfSize + 0.5) * self.degperpixel
+        # calculate positions based on rotation matrix, centered at RA ~ 180, dec 10.
+        xPos = ccdinfo['CRVAL1'] - 180 + ccdinfo['CD1_1'] * (float(ix) - xpixHalfSize + 0.5) + ccdinfo['CD1_2'] * (float(iy) - ypixHalfSize + 0.5)
+        yPos = ccdinfo['CRVAL2'] - 10  + ccdinfo['CD2_1'] * (float(ix) - xpixHalfSize + 0.5) + ccdinfo['CD2_2'] * (float(iy) - ypixHalfSize + 0.5)
 
         return xPos, yPos
 
     def getPixel(self, extname, xPos, yPos):
-        """ given a coordinate in [mm], return pixel number
+        """ given a coordinate in angle (degree), return pixel number
         """
 
-        ccdinfo = self.infoDict[extname]
+        ccdinfo = self.infoDict[self.infoDict['EXTNAME'] == extname]
 
         # CCD size in pixels
         if ccdinfo["FAflag"]:
-            xpixHalfSize = 512.
+            xpixHalfSize = 1024.
             ypixHalfSize = 512.
         else:
-            print('WE ONLY HAVE FAflag CHIPS HERE!')
+            print('WRONG! WE ONLY HAVE FAflag CHIPS HERE!')
 
 
         # calculate positions
-        ix = (xPos - ccdinfo["xCenter"]) / self.degperpixel + xpixHalfSize - 0.5
-        iy = (yPos - ccdinfo["yCenter"]) / self.degperpixel + ypixHalfSize - 0.5
+        ix = ((xPos - ccdinfo['CRVAL1'] + 180) * ccdinfo['CD2_2'] - (yPos - ccdinfo['CRVAL2'] + 10) * ccdinfo['CD1_2']) / (ccdinfo['CD1_1'] * ccdinfo['CD2_2'] - ccdinfo['CD2_1'] * ccdinfo['CD1_2']) + xpixHalfSize - 0.5
+        iy = ((xPos - ccdinfo['CRVAL1'] + 180) * ccdinfo['CD2_1'] - (yPos - ccdinfo['CRVAL2'] + 10) * ccdinfo['CD1_1']) / (ccdinfo['CD1_2'] * ccdinfo['CD2_1'] - ccdinfo['CD2_2'] * ccdinfo['CD1_1']) + ypixHalfSize - 0.5
 
         return ix, iy
 
@@ -84,25 +107,25 @@ class desiinfo(object):
         """ given x,y position on the focal plane, return the sensor name
         or None, if not interior to a chip
         """
-        for ext in list(self.infoDict.keys()):
-            ccdinfo = self.infoDict[ext]
+        for extname in list(self.infoDict['EXTNAME']):
+            ccdinfo = self.infoDict[self.infoDict['PETAL'] == petal]
             # is this x,y inside this chip?
-            nxdif = numpy.abs((xPos - ccdinfo["xCenter"]) / self.degperpixel)
-            nydif = numpy.abs((yPos - ccdinfo["yCenter"]) / self.degperpixel)
+            nxdif = numpy.abs((xPos - ccdinfo['CRVAL1'] + 180) / self.degperpixel)
+            nydif = numpy.abs((yPos - ccdinfo['CRVAL2'] + 10)  / self.degperpixel)
 
             # CCD size in pixels
             if ccdinfo["FAflag"]:
-                xpixHalfSize = 512.
+                xpixHalfSize = 1024.
                 ypixHalfSize = 512.
             else:
-                print('WE ONLY HAVE FAflag CHIPS HERE!')
+                print('WRONG WE ONLY HAVE FAflag CHIPS HERE!')
 
             if nxdif <= xpixHalfSize and nydif <= ypixHalfSize:
-                return ext
+                return extname
 
         # get to here if we are not inside a chip
-        #return None
-        return ext # for test purpose, not matter where the position of the star, always return GFA1
+        return None
+        #return ext # for test purpose, not matter where the position of the star, always return GFA1
 
 
 class desiciinfo(object):
@@ -147,7 +170,7 @@ class desiciinfo(object):
 
     def __getstate__(self):
         stateDict = {}
-        keysToPickle = ['infoDict', 'degperpixel', 'rClear']
+        keysToPickle = ['infoDict', 'degperpixel_c', 'degperpixel_t', 'degperpixel_r', 'rClear']
         for key in keysToPickle:
             stateDict[key] = self.__dict__[key]
         return stateDict

@@ -168,12 +168,12 @@ class donutfit(object):
             if list(self.inputHeader.keys()).count("IX")>0:
                 ix = self.inputHeader["IX"]
             else:
-                ix = 0.
+                ix = 1536. #0.
                 
             if list(self.inputHeader.keys()).count("IY")>0:
                 iy = self.inputHeader["IY"]
             else:
-                iy = 0.
+                iy = 1024. #0.
 
             # calculate position in DECam focal plane
             # if this info isn't in the header, just set values to 0,0
@@ -469,7 +469,7 @@ class donutfit(object):
 
         ##### add the rotations ######
 
-        if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7:
+        if self.paramDict["iTelescope"] == 5 or self.paramDict["iTelescope"] == 6 or self.paramDict["iTelescope"] == 7 or self.paramDict["iTelescope"] == 8:
 
             outputDict['ROT'] = self.rotate_angle  # save the rotation angle to the fits header
 
