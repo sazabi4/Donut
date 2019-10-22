@@ -17,9 +17,9 @@ class desiinfo(object):
 
         f = open('GFA_CDs.txt')
         tmp = f.readlines()
-        infoDict = numpy.zeros(10, dtype=[('PETAL', '<i4'), ('CRVAL1', '<f8'), ('CRVAL2', '<f8'), ('CRPIX1', '<f8'),
+        infoDict = numpy.zeros(10, dtype=[('PETAL', '<i4'), ('PETALLOC', '<i4'), ('CRVAL1', '<f8'), ('CRVAL2', '<f8'), ('CRPIX1', '<f8'),
                                    ('CRPIX2', '<f8'), ('CD1_1', '<f8'), ('CD1_2', '<f8'), ('CD2_1', '<f8'),
-                                   ('CD2_2', '<f8'), ('FAflag', 'bool'), ('Offset', '<f8'), ('EXTNAME', 'S6')])
+                                   ('CD2_2', '<f8'), ('FAflag', 'bool'), ('Offset', '<f8'), ('EXTNAME', 'S6'), ('Rotation', '<f8')])
         # need to update here: the sign for offset depend on the ix pixel value
         infoDict['Offset'] = 1500.
 
@@ -33,10 +33,15 @@ class desiinfo(object):
                 infoDict[a][k] = b
 
         #assign ones are Focus Alignment Chips
-        for i in [1, 3, 6, 8]:
-            infoDict['FA_FLAG'][i] = 1
+        for i in range(10):
+            if i in [1, 4, 6, 9]:
+                idx = infoDict['PETALLOC'] == i
+                infoDict['FAflag'][idx] = 1
+                infoDict['EXTNAME'][idx] = 'FOCUS' + str(i)
+            else:
+                idx = infoDict['PETALLOC'] == i
+                infoDict['EXTNAME'][idx] = 'GUIDE' + str(i)
 
-        infoDict['EXTNAME'] = numpy.array(['petal' + i for i in infoDict['PETAL'].astype('str')])
         #infoDict = OrderedDict()
 
         # store a dictionary for each CCD, keyed by the CCD name
