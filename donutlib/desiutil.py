@@ -15,6 +15,17 @@ class desiinfo(object):
         keyed by the CCD name
         """
 
+        infoDict = OrderedDict()
+
+        # store a dictionary for each CCD, keyed by the CCD name
+        # Rotation here is defined as the rotation angle from chip frame to fiducial global frame, counter-clock wise is positive
+        infoDict["FOCUS1"] = {"CRVAL1": 178.7586, "CRVAL2":  9.0116, "CD1_1": -3.4778e-05, "CD1_2":  4.3981e-05, "CD2_1":  4.7668e-05, "CD2_2":  3.1954e-05, "Rotation":  -54., "FAflag": True, "Offset": 1500}
+        infoDict["FOCUS4"] = {"CRVAL1": 179.4300, "CRVAL2": 11.4703, "CD1_1":  5.6263e-05, "CD1_2":  1.6797e-05, "CD2_1":  1.8281e-05, "CD2_2": -5.1696e-05, "Rotation": -162., "FAflag": True, "Offset": 1500}
+        infoDict["FOCUS9"] = {"CRVAL1": 180.5650, "CRVAL2":  8.5285, "CD1_1": -5.6274e-05, "CD1_2": -1.6800e-05, "CD2_1": -1.8284e-05, "CD2_2":  5.1704e-05, "Rotation":   18., "FAflag": True, "Offset": 1500}
+        infoDict["FOCUS6"] = {"CRVAL1": 181.2488, "CRVAL2": 10.9838, "CD1_1":  3.4774e-05, "CD1_2": -4.3977e-05, "CD2_1": -4.7862e-05, "CD2_2": -3.1951e-05, "Rotation":  126., "FAflag": True, "Offset": 1500}
+
+
+        """This is the old version (need to read in a file)
         f = open('GFA_CDs.txt')
         tmp = f.readlines()
         infoDict = numpy.zeros(10, dtype=[('PETAL', '<i4'), ('PETALLOC', '<i4'), ('CRVAL1', '<f8'), ('CRVAL2', '<f8'), ('CRPIX1', '<f8'),
@@ -41,12 +52,8 @@ class desiinfo(object):
             else:
                 idx = infoDict['PETALLOC'] == i
                 infoDict['EXTNAME'][idx] = 'GUIDE' + str(i)
+        """
 
-        #infoDict = OrderedDict()
-
-        # store a dictionary for each CCD, keyed by the CCD name
-        #infoDict["GFA1"] = {"xCenter": 1.318, "yCenter": 0.86, "FAflag": True, "CCDNUM": 1, "Offset": 1500,
-        #                  "Extension": 1}
 
         return infoDict
 
@@ -72,13 +79,13 @@ class desiinfo(object):
         note that the ix,iy are Image pixels - overscans removed - and start at zero
         """
 
-        ccdinfo = self.infoDict[self.infoDict['EXTNAME'] == extname]
-        print(ccdinfo)
+        #ccdinfo = self.infoDict[self.infoDict['EXTNAME'] == extname]
+        ccdinfo = self.infoDict[extname]
 
         # CCD size in pixels
         if ccdinfo["FAflag"]:
             xpixHalfSize = 1024.
-            ypixHalfSize = 512.
+            ypixHalfSize = 516. #GFA is 1032 pixel, not 1024
         else:
             print('WRONG! WE ONLY HAVE FAflag CHIPS HERE!')
 
@@ -92,12 +99,13 @@ class desiinfo(object):
         """ given a coordinate in angle (degree), return pixel number
         """
 
-        ccdinfo = self.infoDict[self.infoDict['EXTNAME'] == extname]
+        #ccdinfo = self.infoDict[self.infoDict['EXTNAME'] == extname]
+        ccdinfo = self.infoDict[extname]
 
         # CCD size in pixels
         if ccdinfo["FAflag"]:
             xpixHalfSize = 1024.
-            ypixHalfSize = 512.
+            ypixHalfSize = 516. #GFA is 1032 pixel, not 1024
         else:
             print('WRONG! WE ONLY HAVE FAflag CHIPS HERE!')
 
@@ -112,8 +120,10 @@ class desiinfo(object):
         """ given x,y position on the focal plane, return the sensor name
         or None, if not interior to a chip
         """
-        for extname in list(self.infoDict['EXTNAME']):
-            ccdinfo = self.infoDict[self.infoDict['PETAL'] == petal]
+        #for extname in list(self.infoDict['EXTNAME']):
+        #    ccdinfo = self.infoDict[self.infoDict['PETAL'] == petal]
+        for ext in list(self.infoDict.keys()):
+            ccdinfo = self.infoDict[ext]
             # is this x,y inside this chip?
             nxdif = numpy.abs((xPos - ccdinfo['CRVAL1'] + 180) / self.degperpixel)
             nydif = numpy.abs((yPos - ccdinfo['CRVAL2'] + 10)  / self.degperpixel)
@@ -121,7 +131,7 @@ class desiinfo(object):
             # CCD size in pixels
             if ccdinfo["FAflag"]:
                 xpixHalfSize = 1024.
-                ypixHalfSize = 512.
+                ypixHalfSize = 516. #GFA is 1032 pixel, not 1024
             else:
                 print('WRONG WE ONLY HAVE FAflag CHIPS HERE!')
 
