@@ -55,7 +55,7 @@ class donutfit(object):
             from donutlib.desiutil import desiciinfo
             self.dInfo = desiciinfo()
         elif self.paramDict["iTelescope"] == 5:
-            print('This is for DESI')
+            print('This is for DESI GFA')
             from donutlib.desiutil import desiinfo
             self.dInfo = desiinfo()
         else:
@@ -190,7 +190,6 @@ class donutfit(object):
                 self.yDECam = 0.
 
             print('Location of the donut in field angles', self.xDECam, self.yDECam)
-
             self.rotate_angle = self.dInfo.info()[extname]['Rotation']
             print('Rotation angle for extname', extname, ':' , self.rotate_angle)
 
@@ -237,6 +236,7 @@ class donutfit(object):
         # set range for x,y tilts, to prevent runaway values
         # offset = 4 lambda F * zern_2 or zern_3 = 8.4 micron/ unit of z2,3
         # limit to +- 15 pixels = +-27 units, make it +-30
+        # Ting's note, change the z2/z3 limits
         self.loParam[self.gFitFunc.ipar_ZernikeFirst+0] = -30.0 
         self.hiParam[self.gFitFunc.ipar_ZernikeFirst+0] = 30.0 
         self.loParam[self.gFitFunc.ipar_ZernikeFirst+1] = -30.0 

@@ -60,6 +60,7 @@ class desiinfo(object):
     def __init__(self, **inputDict):
 
         self.infoDict = self.info()
+        self.mmperpixel = 0.015
         self.degperpixel = 5.97e-5 #pixel scale in deg/pixel assuming pixel size = 15 micron and focal length = 3.6 * 4 m
         self.rClear = 99999 # something for vignetting
 
@@ -122,25 +123,31 @@ class desiinfo(object):
         """
         #for extname in list(self.infoDict['EXTNAME']):
         #    ccdinfo = self.infoDict[self.infoDict['PETAL'] == petal]
+                
         for ext in list(self.infoDict.keys()):
             ccdinfo = self.infoDict[ext]
-            # is this x,y inside this chip?
-            nxdif = numpy.abs((xPos - ccdinfo['CRVAL1'] + 180) / self.degperpixel)
-            nydif = numpy.abs((yPos - ccdinfo['CRVAL2'] + 10)  / self.degperpixel)
-
             # CCD size in pixels
             if ccdinfo["FAflag"]:
                 xpixHalfSize = 1024.
                 ypixHalfSize = 516. #GFA is 1032 pixel, not 1024
             else:
                 print('WRONG WE ONLY HAVE FAflag CHIPS HERE!')
+            # is this x,y inside this chip?
+            #nxdif = numpy.abs((xPos - ccdinfo['CRVAL1'] + 180) / self.degperpixel)
+            #nydif = numpy.abs((yPos - ccdinfo['CRVAL2'] + 10)  / self.degperpixel)
+            #ix,iy = getPixel(ext,xPos,yPos)
+            ix = ((xPos - ccdinfo['CRVAL1'] + 180) * ccdinfo['CD2_2'] - (yPos - ccdinfo['CRVAL2'] + 10) * ccdinfo['CD1_2']) / (ccdinfo['CD1_1'] * ccdinfo['CD2_2'] - ccdinfo['CD2_1'] * ccdinfo['CD1_2']) + xpixHalfSize - 0.5
+            iy =  iy = ((xPos - ccdinfo['CRVAL1'] + 180) * ccdinfo['CD2_1'] - (yPos - ccdinfo['CRVAL2'] + 10) * ccdinfo['CD1_1']) / (ccdinfo['CD1_2'] * ccdinfo['CD2_1'] - ccdinfo['CD2_2'] * ccdinfo['CD1_1']) + ypixHalfSize - 0.5
+           
+            if ix <= 2*xpixHalfSize and iy <= 2*ypixHalfSize and ix >=0 and iy >= 0:
+                return ext
 
-            if nxdif <= xpixHalfSize and nydif <= ypixHalfSize:
-                return extname
 
         # get to here if we are not inside a chip
+        print("{:4f}".format(xPos))
+        print("{:4f}".format(yPos))
         return None
-        #return ext # for test purpose, not matter where the position of the star, always return GFA1
+        
 
 
 class desiciinfo(object):
